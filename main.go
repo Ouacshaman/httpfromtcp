@@ -3,26 +3,47 @@ package main
 import (
 	"fmt"
 	"io"
-	"os"
+	"net"
 	"strings"
 )
 
 func main() {
-	file, err := os.Open("messages.txt")
-	defer file.Close()
+	ln, err := net.Listen("tcp", ":42069")
 	if err != nil {
-		fmt.Printf("Unable to Open File: %v", err)
+		fmt.Printf("Unable to Listen to TCP port: %v\n", err)
 		return
 	}
-	ch := getLinesChannel(file)
-	for {
-		v, ok := <-ch
-		if !ok {
-			break
-		}
-		fmt.Printf("read: %s\n", v)
-	}
 
+	defer ln.Close()
+
+	for {
+		conn, err := ln.Accept()
+		if err != nil {
+			fmt.Printf("Unable to accept connection: %v\n", err)
+			return
+		}
+		fmt.Println("Connection have been accepted")
+		go func() {
+			defer conn.Close()
+			ch := getLinesChannel(conn)
+			/*
+				The loop below is similar to
+				for {
+				    v, ok := <-ch
+				    if !ok {
+				        break
+				    }
+				    fmt.Printf("%s\n", v)
+				}
+				But it is more concise, less error-prone, and iterates the values similary in a more clear way
+				this will iterate till the channel is closed
+			*/
+			for line := range ch {
+				fmt.Printf("%s\n", line)
+			}
+			fmt.Println("Connection Closed")
+		}()
+	}
 }
 
 func getLinesChannel(f io.ReadCloser) <-chan string {
@@ -38,6 +59,7 @@ func getLinesChannel(f io.ReadCloser) <-chan string {
 			This will ensure the channel close after the go routine is processed and no data is sent to a closed channel
 		*/
 		defer close(ch)
+
 		res := ""
 
 		for {
@@ -46,7 +68,9 @@ func getLinesChannel(f io.ReadCloser) <-chan string {
 			if err != nil {
 				break
 			}
+
 			parts := strings.Split(string(b[:n]), "\n")
+
 			for _, v := range parts[:len(parts)-1] {
 				res += v
 				ch <- res
@@ -54,6 +78,7 @@ func getLinesChannel(f io.ReadCloser) <-chan string {
 			}
 			res += parts[len(parts)-1]
 		}
+		ch <- res
 	}()
 	return ch
 }
