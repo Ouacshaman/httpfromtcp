@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -16,34 +17,29 @@ func main() {
 
 	defer ln.Close()
 
-	for {
-		conn, err := ln.Accept()
-		if err != nil {
-			fmt.Printf("Unable to accept connection: %v\n", err)
-			return
-		}
-		fmt.Println("Connection have been accepted")
-		go func() {
-			defer conn.Close()
-			ch := getLinesChannel(conn)
-			/*
-				The loop below is similar to
-				for {
-				    v, ok := <-ch
-				    if !ok {
-				        break
-				    }
-				    fmt.Printf("%s\n", v)
-				}
-				But it is more concise, less error-prone, and iterates the values similary in a more clear way
-				this will iterate till the channel is closed
-			*/
-			for line := range ch {
-				fmt.Printf("%s\n", line)
-			}
-			fmt.Println("Connection Closed")
-		}()
+	conn, err := ln.Accept()
+	if err != nil {
+		fmt.Printf("Unable to accept connection: %v\n", err)
+		return
 	}
+	fmt.Println("Connection: ", conn.RemoteAddr(), " have been accepted")
+	ch := getLinesChannel(conn)
+	/*
+		The loop below is similar to
+		for {
+		    v, ok := <-ch
+		    if !ok {
+		        break
+		    }
+		    fmt.Printf("%s\n", v)
+		}
+		But it is more concise, less error-prone, and iterates the values similary in a more clear way
+		this will iterate till the channel is closed
+	*/
+	for line := range ch {
+		fmt.Printf("%s\n", line)
+	}
+	fmt.Println("Connection: ", conn.RemoteAddr(), " Closed")
 }
 
 func getLinesChannel(f io.ReadCloser) <-chan string {
@@ -59,6 +55,7 @@ func getLinesChannel(f io.ReadCloser) <-chan string {
 			This will ensure the channel close after the go routine is processed and no data is sent to a closed channel
 		*/
 		defer close(ch)
+		defer f.Close()
 
 		res := ""
 
@@ -66,7 +63,11 @@ func getLinesChannel(f io.ReadCloser) <-chan string {
 			b := make([]byte, 8)
 			n, err := f.Read(b)
 			if err != nil {
-				break
+				if errors.Is(err, io.EOF) {
+					break
+				}
+				fmt.Println("Error Found: ", err)
+				return
 			}
 
 			parts := strings.Split(string(b[:n]), "\n")
