@@ -16,30 +16,31 @@ func main() {
 	}
 
 	defer ln.Close()
-
-	conn, err := ln.Accept()
-	if err != nil {
-		fmt.Printf("Unable to accept connection: %v\n", err)
-		return
-	}
-	fmt.Println("Connection: ", conn.RemoteAddr(), " have been accepted")
-	ch := getLinesChannel(conn)
-	/*
-		The loop below is similar to
-		for {
-		    v, ok := <-ch
-		    if !ok {
-		        break
-		    }
-		    fmt.Printf("%s\n", v)
+	for {
+		conn, err := ln.Accept()
+		if err != nil {
+			fmt.Printf("Unable to accept connection: %v\n", err)
+			return
 		}
-		But it is more concise, less error-prone, and iterates the values similary in a more clear way
-		this will iterate till the channel is closed
-	*/
-	for line := range ch {
-		fmt.Printf("%s\n", line)
+		fmt.Println("Connection: ", conn.RemoteAddr(), " have been accepted")
+		ch := getLinesChannel(conn)
+		/*
+			The loop below is similar to
+			for {
+			    v, ok := <-ch
+			    if !ok {
+			        break
+			    }
+			    fmt.Printf("%s\n", v)
+			}
+			But it is more concise, less error-prone, and iterates the values similary in a more clear way
+			this will iterate till the channel is closed
+		*/
+		for line := range ch {
+			fmt.Printf("%s\n", line)
+		}
+		fmt.Println("Connection: ", conn.RemoteAddr(), " Closed")
 	}
-	fmt.Println("Connection: ", conn.RemoteAddr(), " Closed")
 }
 
 func getLinesChannel(f io.ReadCloser) <-chan string {
