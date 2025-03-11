@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"net"
+	"os"
 )
 
 func main() {
@@ -18,4 +20,17 @@ func main() {
 		return
 	}
 	defer udpConn.Close()
+
+	bufReader := bufio.NewReader(os.Stdin)
+
+	for {
+		fmt.Printf("> ")
+
+		line, err := bufReader.ReadString('\n')
+		if err != nil {
+			fmt.Println("Unable to read line to string")
+		}
+
+		udpConn.Write([]byte(line))
+	}
 }
