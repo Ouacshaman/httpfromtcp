@@ -30,9 +30,24 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 	rq_line := lines[0]
 	rq_parts := strings.Split(rq_line, " ")
 
+	if len(rq_parts) != 3 {
+		fmt.Println("Invalid Amounts of Parts on the Request Line")
+		return &request, errors.New("Invalid Amount of Parts on Request Line")
+	}
+
+	if rq_parts[0] != "POST" && rq_parts[0] != "GET" {
+		fmt.Println("Invalid Placement and not a valid method")
+		return &request, errors.New("Invalid Method and Placement")
+	}
+
 	if rq_parts[0] != strings.ToUpper(rq_parts[0]) {
 		fmt.Println("Method not capitalized: ", rq_parts[0])
 		return &request, errors.New("Method not capitalized")
+	}
+
+	if strings.HasPrefix(rq_parts[1], "/") == false {
+		fmt.Println("Invalid Request Target")
+		return &request, errors.New("Invalid Request Target")
 	}
 
 	if rq_parts[2] != "HTTP/1.1" {
