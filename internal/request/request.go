@@ -1,7 +1,7 @@
 package request
 
 import (
-	"errors"
+	"bytes"
 	"fmt"
 	"io"
 	"strings"
@@ -17,47 +17,63 @@ type RequestLine struct {
 	Method        string
 }
 
+const crlf = "\r\n"
+
 func RequestFromReader(reader io.Reader) (*Request, error) {
-	var request Request
-	b := make([]byte, 64)
-	_, err := reader.Read(b)
+	raw, err := io.ReadAll(reader)
 	if err != nil {
-		return &request, err
+		return nil, err
 	}
 
-	lines := strings.Split(string(b), "\r\n")
-
-	rq_line := lines[0]
-	rq_parts := strings.Split(rq_line, " ")
-
-	if len(rq_parts) != 3 {
-		fmt.Println("Invalid Amounts of Parts on the Request Line")
-		return &request, errors.New("Invalid Amount of Parts on Request Line")
+	rqLine, err := parseRequestLine(raw)
+	if err != nil {
+		return nil, err
 	}
 
-	if rq_parts[0] != "POST" && rq_parts[0] != "GET" {
-		fmt.Println("Invalid Placement and not a valid method")
-		return &request, errors.New("Invalid Method and Placement")
+	return &Request{
+		RequestLine: *rqLine,
+	}, nil
+}
+
+func parseRequestLine(data []byte) (*RequestLine, error) {
+	crlfInd := bytes.Index(data, []byte(crlf))
+	if crlfInd == -1 {
+		return nil, fmt.Errorf("CRLF not found in request-line")
+	}
+	requestLine, err := requestLineFromString(string(data[:crlfInd]))
+	if err != nil {
+		return nil, err
+	}
+	return requestLine, nil
+}
+
+func requestLineFromString(rqLine string) (*RequestLine, error) {
+	rqParts := strings.Split(rqLine, " ")
+
+	if len(rqParts) != 3 {
+		return nil, fmt.Errorf("poorly formatted request-line: %s", rqLine)
 	}
 
-	if rq_parts[0] != strings.ToUpper(rq_parts[0]) {
-		fmt.Println("Method not capitalized: ", rq_parts[0])
-		return &request, errors.New("Method not capitalized")
+	for _, v := range rqParts[0] {
+		if v < 'A' || v > 'Z' {
+			return nil, fmt.Errorf("invalid method: %s", rqParts[0])
+		}
 	}
 
-	if strings.HasPrefix(rq_parts[1], "/") == false {
-		fmt.Println("Invalid Request Target")
-		return &request, errors.New("Invalid Request Target")
+	versionParts := strings.Split(rqParts[2], "/")
+
+	if versionParts[0] != "HTTP" {
+		return nil, fmt.Errorf("invalid Http version: %s", versionParts[0])
 	}
 
-	if rq_parts[2] != "HTTP/1.1" {
-		fmt.Printf("The version is incorrect and not HTTP/1.1: %s", rq_parts[2])
-		return &request, errors.New("Incorrect HTTP version")
+	if versionParts[1] != "1.1" {
+		return nil, fmt.Errorf("invalid Http version: %s", versionParts[0])
 	}
 
-	request.RequestLine.Method = rq_parts[0]
-	request.RequestLine.RequestTarget = rq_parts[1]
-	request.RequestLine.HttpVersion = strings.TrimPrefix(rq_parts[2], "HTTP/")
+	return &RequestLine{
+		Method:        rqParts[0],
+		RequestTarget: rqParts[1],
+		HttpVersion:   versionParts[1],
+	}, nil
 
-	return &request, nil
 }
