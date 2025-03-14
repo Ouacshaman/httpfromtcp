@@ -5,6 +5,15 @@ import (
 	"fmt"
 	"io"
 	"strings"
+
+	"github.com/go-faster/errors"
+)
+
+type State int
+
+const (
+	Initialized State = iota
+	Done
 )
 
 type Request struct {
@@ -12,6 +21,7 @@ type Request struct {
 }
 
 type RequestLine struct {
+	State
 	HttpVersion   string
 	RequestTarget string
 	Method        string
@@ -35,16 +45,35 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 	}, nil
 }
 
-func parseRequestLine(data []byte) (*RequestLine, error) {
+func (r *Request) parse(data []byte) (int, error) {
+	switch r.RequestLine.State {
+	case Initialized:
+		numByte, err := parseRequestLine(data)
+		if err != nil {
+			return 0, err
+		}
+		if numByte == 0 {
+			return 0, nil
+		}
+		r.RequestLine.State = Done
+		return numByte, nil
+	case Done:
+		return 0, fmt.Errorf("error: trying to read in Done State: %d", Done)
+	default:
+		return 0, errors.New("Unknow State")
+	}
+}
+
+func parseRequestLine(data []byte) (int, err) {
 	crlfInd := bytes.Index(data, []byte(crlf))
 	if crlfInd == -1 {
-		return nil, fmt.Errorf("CRLF not found in request-line")
+		return 0
 	}
-	requestLine, err := requestLineFromString(string(data[:crlfInd]))
+	_, err := requestLineFromString(string(data[:crlfInd]))
 	if err != nil {
 		return nil, err
 	}
-	return requestLine, nil
+	return len(data[:crlfInd]), nil
 }
 
 func requestLineFromString(rqLine string) (*RequestLine, error) {
