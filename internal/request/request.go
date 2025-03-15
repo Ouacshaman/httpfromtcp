@@ -2,11 +2,10 @@ package request
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
-
-	"github.com/go-faster/errors"
 )
 
 type State int
@@ -17,11 +16,11 @@ const (
 )
 
 type Request struct {
+	State
 	RequestLine RequestLine
 }
 
 type RequestLine struct {
-	State
 	HttpVersion   string
 	RequestTarget string
 	Method        string
@@ -29,33 +28,57 @@ type RequestLine struct {
 
 const crlf = "\r\n"
 
-func RequestFromReader(reader io.Reader) (*Request, error) {
-	raw, err := io.ReadAll(reader)
-	if err != nil {
-		return nil, err
-	}
+func RequestFromReader(reader io.Reader, bufferSize int) (*Request, error) {
+	buf := make([]byte, bufferSize, bufferSize)
 
-	rqLine, err := parseRequestLine(raw)
-	if err != nil {
-		return nil, err
-	}
+	readToIndex := 0
 
-	return &Request{
-		RequestLine: *rqLine,
-	}, nil
+	var rq Request
+
+	rq.State = Initialized
+
+	for rq.State != Done {
+		if readToIndex == len(buf)-1 {
+			dbl := make([]byte, len(buf)*2, len(buf)*2)
+			copy(dbl, buf)
+			buf = dbl
+		}
+		for {
+			n, err := reader.Read(buf)
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					rq.State = Done
+					break
+				}
+
+				fmt.Println("Error Found: ", err)
+				return nil, err
+			}
+			fmt.Println(string(buf), n)
+			readToIndex = n
+			n, err = rq.parse(buf[:n])
+			if err != nil {
+				return nil, errors.New("Unable to Parse into buffer")
+			}
+			empty := make([]byte, 0)
+			copy(buf, empty)
+			readToIndex -= n
+		}
+	}
+	return &rq, nil
 }
 
 func (r *Request) parse(data []byte) (int, error) {
-	switch r.RequestLine.State {
+	switch r.State {
 	case Initialized:
-		numByte, err := parseRequestLine(data)
+		numByte, err := r.parseRequestLine(data)
 		if err != nil {
 			return 0, err
 		}
 		if numByte == 0 {
 			return 0, nil
 		}
-		r.RequestLine.State = Done
+		r.State = Done
 		return numByte, nil
 	case Done:
 		return 0, fmt.Errorf("error: trying to read in Done State: %d", Done)
@@ -64,45 +87,45 @@ func (r *Request) parse(data []byte) (int, error) {
 	}
 }
 
-func parseRequestLine(data []byte) (int, err) {
+func (r *Request) parseRequestLine(data []byte) (int, error) {
 	crlfInd := bytes.Index(data, []byte(crlf))
 	if crlfInd == -1 {
-		return 0
+		return 0, nil
 	}
-	_, err := requestLineFromString(string(data[:crlfInd]))
+	err := r.requestLineFromString(string(data[:crlfInd]))
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 	return len(data[:crlfInd]), nil
 }
 
-func requestLineFromString(rqLine string) (*RequestLine, error) {
+func (r *Request) requestLineFromString(rqLine string) error {
 	rqParts := strings.Split(rqLine, " ")
 
 	if len(rqParts) != 3 {
-		return nil, fmt.Errorf("poorly formatted request-line: %s", rqLine)
+		return fmt.Errorf("poorly formatted request-line: %s", rqLine)
 	}
 
 	for _, v := range rqParts[0] {
 		if v < 'A' || v > 'Z' {
-			return nil, fmt.Errorf("invalid method: %s", rqParts[0])
+			return fmt.Errorf("invalid method: %s", rqParts[0])
 		}
 	}
 
 	versionParts := strings.Split(rqParts[2], "/")
 
 	if versionParts[0] != "HTTP" {
-		return nil, fmt.Errorf("invalid Http version: %s", versionParts[0])
+		return fmt.Errorf("invalid Http version: %s", versionParts[0])
 	}
 
 	if versionParts[1] != "1.1" {
-		return nil, fmt.Errorf("invalid Http version: %s", versionParts[0])
+		return fmt.Errorf("invalid Http version: %s", versionParts[0])
 	}
 
-	return &RequestLine{
-		Method:        rqParts[0],
-		RequestTarget: rqParts[1],
-		HttpVersion:   versionParts[1],
-	}, nil
+	r.RequestLine.Method = rqParts[0]
+	r.RequestLine.RequestTarget = rqParts[1]
+	r.RequestLine.HttpVersion = rqParts[2]
+
+	return nil
 
 }
