@@ -1,11 +1,9 @@
 package main
 
 import (
-	"errors"
 	"fmt"
-	"io"
+	"github.com/Ouacshaman/httpfromtcp/internal/request"
 	"net"
-	"strings"
 )
 
 func main() {
@@ -23,64 +21,13 @@ func main() {
 			return
 		}
 		fmt.Println("Connection: ", conn.RemoteAddr(), " have been accepted")
-		ch := getLinesChannel(conn)
-		/*
-			The loop below is similar to
-			for {
-			    v, ok := <-ch
-			    if !ok {
-			        break
-			    }
-			    fmt.Printf("%s\n", v)
-			}
-			But it is more concise, less error-prone, and iterates the values similary in a more clear way
-			this will iterate till the channel is closed
-		*/
-		for line := range ch {
-			fmt.Printf("%s\n", line)
+		rq, err := request.RequestFromReader(conn)
+		if err != nil {
+			fmt.Println("Unable to generate request from Connection")
+			return
 		}
-		fmt.Println("Connection: ", conn.RemoteAddr(), " Closed")
+
+		fmt.Printf("Request line:\n- Method: %s\n- Target: %s\n- Version: %s\n", rq.RequestLine.Method, rq.RequestLine.RequestTarget, rq.RequestLine.HttpVersion)
+
 	}
-}
-
-func getLinesChannel(f io.ReadCloser) <-chan string {
-	ch := make(chan string)
-
-	go func() {
-		/*
-			channel is closed inside as the go routine is the sender
-			The goroutine handles everything related to sending values
-			to the channel.
-			It doesn't rely on external code to manage the channel's lifecycle.
-			This will ensure channel does not close prematurely
-			This will ensure the channel close after the go routine is processed and no data is sent to a closed channel
-		*/
-		defer close(ch)
-		defer f.Close()
-
-		res := ""
-
-		for {
-			b := make([]byte, 8)
-			n, err := f.Read(b)
-			if err != nil {
-				if errors.Is(err, io.EOF) {
-					break
-				}
-				fmt.Println("Error Found: ", err)
-				return
-			}
-
-			parts := strings.Split(string(b[:n]), "\n")
-
-			for _, v := range parts[:len(parts)-1] {
-				res += v
-				ch <- res
-				res = ""
-			}
-			res += parts[len(parts)-1]
-		}
-		ch <- res
-	}()
-	return ch
 }
