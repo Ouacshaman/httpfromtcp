@@ -22,19 +22,20 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 		return 0, true, nil
 	}
 
-	afterColon := bytes.SplitAfterN(data[:idx], []byte(":"), 2)
+	trimedCrlf := data[:idx]
 
-	fieldKey := bytes.TrimSpace(afterColon[0])
-	if fieldKey[len(fieldKey)-2] == ' ' {
-		return 0, false, fmt.Errorf("FieldName end with Space: %s", string(fieldKey))
+	colonIdx := bytes.Index(trimedCrlf, []byte(":"))
+	if colonIdx == -1 {
+		return 0, false, fmt.Errorf("Invalid Format: Colon not found")
+	}
+	if colonIdx > 0 && trimedCrlf[colonIdx-1] == ' ' {
+		return 0, false, fmt.Errorf("Invalid Format: Whitespace between Field Name and Colon")
 	}
 
-	fieldVal := bytes.TrimSpace(afterColon[1])
+	fieldVal := string(bytes.TrimSpace(trimedCrlf[colonIdx+1:]))
+	fieldNameStr := string(bytes.TrimSpace(trimedCrlf[:colonIdx]))
+	h[fieldNameStr] = fieldVal
 
-	fmt.Println("Header Parse Out: ", string(fieldKey), "|", string(fieldVal))
-
-	h["Head"] = "localhost:42069"
-
-	// + 2 for \r\n
-	return len(fieldKey) + len(":") + len(fieldVal) + len("\r\n"), false, nil
+	// +2 for \r\n
+	return idx + 2, false, nil
 }

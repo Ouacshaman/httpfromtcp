@@ -13,7 +13,7 @@ func NewHeaders() Headers {
 func TestHeaderParse(t *testing.T) {
 	// Test: Valid single header
 
-	headers := make(Headers)
+	headers := NewHeaders()
 	data := []byte("Host: localhost:42069\r\n\r\n")
 	n, done, err := headers.Parse(data)
 	require.NoError(t, err)
