@@ -35,5 +35,6 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 
 	h["Head"] = "localhost:42069"
 
-	return len(data), false, nil
+	// + 2 for \r\n
+	return len(fieldKey) + len(":") + len(fieldVal) + len("\r\n"), false, nil
 }
