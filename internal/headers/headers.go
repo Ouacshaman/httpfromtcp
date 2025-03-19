@@ -3,6 +3,7 @@ package headers
 import (
 	"bytes"
 	"fmt"
+	"strings"
 )
 
 type Headers map[string]string
@@ -32,8 +33,28 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 		return 0, false, fmt.Errorf("Invalid Format: Whitespace between Field Name and Colon")
 	}
 
+	special := []byte{'!', '#', '$', '%', '&', '\'', '*', '+', '-', '.', '^', '_', '`', '|', '~'}
 	fieldVal := string(bytes.TrimSpace(trimedCrlf[colonIdx+1:]))
-	fieldNameStr := string(bytes.TrimSpace(trimedCrlf[:colonIdx]))
+	fieldNameStr := strings.ToLower(string(bytes.TrimSpace(trimedCrlf[:colonIdx])))
+	for _, v := range []byte(fieldNameStr) {
+		letters := false
+		numbers := false
+		sc := false
+		if 'a' <= v && 'z' >= v {
+			letters = true
+		}
+		if '0' <= v && '9' >= v {
+			numbers = true
+		}
+		for _, n := range special {
+			if v == n {
+				sc = true
+			}
+		}
+		if (numbers || letters || sc) == false {
+			return 0, false, fmt.Errorf("Field Name does not match requirements")
+		}
+	}
 	h[fieldNameStr] = fieldVal
 
 	// +2 for \r\n
