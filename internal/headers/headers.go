@@ -61,7 +61,7 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 		return idx + 2, false, nil
 	}
 
-	h[fieldNameStr] = fmt.Sprintf("%s, %s", elem, fieldVal)
+	h[fieldNameStr] = strings.Join([]string{elem, fieldVal}, ", ")
 	// +2 for \r\n
 	return idx + 2, false, nil
 }
