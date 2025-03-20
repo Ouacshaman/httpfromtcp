@@ -55,8 +55,13 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 			return 0, false, fmt.Errorf("Field Name does not match requirements")
 		}
 	}
-	h[fieldNameStr] = fieldVal
+	elem, ok := h[fieldNameStr]
+	if !ok {
+		h[fieldNameStr] = fieldVal
+		return idx + 2, false, nil
+	}
 
+	h[fieldNameStr] = fmt.Sprintf("%s, %s", elem, fieldVal)
 	// +2 for \r\n
 	return idx + 2, false, nil
 }

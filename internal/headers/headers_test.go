@@ -72,3 +72,23 @@ func TestMultiHeaders(t *testing.T) {
 	_, done, _ = headers.Parse(list[2])
 	assert.True(t, done)
 }
+
+func TestMultiValues(t *testing.T) {
+
+	headers := NewHeaders()
+	data := []byte("Host: localhost:42069\r\n\r\n")
+	n, done, err := headers.Parse(data)
+	require.NoError(t, err)
+	require.NotNil(t, headers)
+	assert.Equal(t, "localhost:42069", headers["host"])
+	assert.Equal(t, 23, n)
+	assert.False(t, done)
+
+	data = []byte("Host: localhost:8080\r\n\r\n")
+	n, done, err = headers.Parse(data)
+	require.NoError(t, err)
+	require.NotNil(t, headers)
+	assert.Equal(t, "localhost:42069, localhost:8080", headers["host"])
+	assert.Equal(t, 22, n)
+	assert.False(t, done)
+}
