@@ -20,7 +20,7 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 
 	// if data starts with crlf
 	if idx == 0 {
-		return 0, true, nil
+		return 2, true, nil
 	}
 
 	trimedCrlf := data[:idx]

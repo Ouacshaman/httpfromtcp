@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/Ouacshaman/httpfromtcp/internal/headers"
 	"io"
 	"strings"
 )
@@ -11,13 +12,15 @@ import (
 type State int
 
 const (
-	Initialized State = iota
-	Done
+	requestStateInitialized State = iota
+	requestStateDone
+	requestStateParsingHeaders
 )
 
 type Request struct {
 	State
 	RequestLine RequestLine
+	Headers     headers.Headers
 }
 
 type RequestLine struct {
@@ -32,9 +35,10 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 	bufferSize := 8
 	buf := make([]byte, bufferSize)
 	readToIndex := 0
-	rq := &Request{State: Initialized}
+	rq := &Request{State: requestStateInitialized}
+	rq.Headers = make(headers.Headers)
 
-	for rq.State != Done {
+	for rq.State != requestStateDone {
 		if readToIndex >= len(buf) {
 			dbl := make([]byte, len(buf)*2)
 			copy(dbl, buf[:readToIndex])
@@ -63,7 +67,7 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 		}
 
 		if err == io.EOF {
-			if rq.State != Done && readToIndex > 0 {
+			if rq.State != requestStateDone && readToIndex > 0 {
 				return nil, errors.New("Unexepected EOF before fulling parsing data")
 			}
 			break
@@ -74,8 +78,26 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 }
 
 func (r *Request) parse(data []byte) (int, error) {
+	totalBytesParsed := 0
+	i := 0
+	max := 25
+	for r.State != requestStateDone {
+		i++
+		if i > max {
+			break
+		}
+		n, err := r.parseSingle(data[totalBytesParsed:])
+		if err != nil {
+			return totalBytesParsed, err
+		}
+		totalBytesParsed += n
+	}
+	return totalBytesParsed, nil
+}
+
+func (r *Request) parseSingle(data []byte) (int, error) {
 	switch r.State {
-	case Initialized:
+	case requestStateInitialized:
 		numByte, err := r.parseRequestLine(data)
 		if err != nil {
 			return 0, err
@@ -83,15 +105,21 @@ func (r *Request) parse(data []byte) (int, error) {
 		if numByte == 0 {
 			return 0, nil
 		}
-		r.State = Done
+		r.State = requestStateParsingHeaders
 		return numByte, nil
-	case Done:
-		return 0, fmt.Errorf("error: trying to read in Done State: %d", Done)
+	case requestStateParsingHeaders:
+		bytesParsed, done, err := r.Headers.Parse(data)
+		if err != nil {
+			return 0, err
+		}
+		if done {
+			r.State = requestStateDone
+		}
+		return bytesParsed, nil
 	default:
 		return 0, errors.New("Unknow State")
 	}
 }
-
 func (r *Request) parseRequestLine(data []byte) (int, error) {
 	crlfInd := bytes.Index(data, []byte(crlf))
 	if crlfInd == -1 {
