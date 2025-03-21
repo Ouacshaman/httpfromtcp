@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/Ouacshaman/httpfromtcp/internal/request"
 	"net"
+
+	"github.com/Ouacshaman/httpfromtcp/internal/request"
 )
 
 func main() {
@@ -28,6 +29,10 @@ func main() {
 		}
 
 		fmt.Printf("Request line:\n- Method: %s\n- Target: %s\n- Version: %s\n", rq.RequestLine.Method, rq.RequestLine.RequestTarget, rq.RequestLine.HttpVersion)
-
+		fmt.Println("Headers:")
+		headers := rq.Headers
+		for k, v := range headers {
+			fmt.Printf("- %s: %s\n", k, v)
+		}
 	}
 }
