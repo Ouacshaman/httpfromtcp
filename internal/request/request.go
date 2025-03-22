@@ -21,6 +21,7 @@ type Request struct {
 	State
 	RequestLine RequestLine
 	Headers     headers.Headers
+	Body        []byte
 }
 
 type RequestLine struct {
