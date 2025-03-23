@@ -66,7 +66,11 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 	return idx + 2, false, nil
 }
 
-func (h Headers) Get(key string) string {
+func (h Headers) Get(key string) (string, error) {
 	lowered := strings.ToLower(key)
-	return h[lowered]
+	elem, ok := h[lowered]
+	if !ok {
+		return "", fmt.Errorf("Get Key Value: %s Not Found", key)
+	}
+	return elem, nil
 }
