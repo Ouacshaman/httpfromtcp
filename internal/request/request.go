@@ -58,7 +58,7 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 
 		bytesPassed, err := rq.parse(buf[:readToIndex])
 		if err != nil {
-			return nil, errors.New("Unable to Parse into buffer")
+			return nil, err
 		}
 
 		/*
