@@ -123,41 +123,51 @@ func (r *Request) parseSingle(data []byte) (int, error) {
 		return bytesParsed, nil
 
 	case requestStateParsingBody:
-		bodyData := data
-
-		elem, err := r.Headers.Get("Content-Length")
+		lengthOfData, err := r.parseBody(data)
 		if err != nil {
-			r.State = requestStateDone
-			return 0, err
-		}
-		contentLength, err := strconv.Atoi(elem)
-		if err != nil {
-			r.State = requestStateDone
-			return 0, err
+			return 0, nil
 		}
 
-		if len(r.Body)+len(bodyData) > contentLength {
-			return 0, fmt.Errorf("Body Length: %d is greater than Content-Length: %d in Headers", len(r.Body)+len(bodyData), contentLength)
-		}
-
-		r.Body = append(r.Body, bodyData...)
-
-		if len(r.Body) == contentLength {
-			r.State = requestStateDone
-			fmt.Println(r.RequestLine.Method)
-			fmt.Println(r.RequestLine.RequestTarget)
-			fmt.Println(r.RequestLine.HttpVersion)
-			for _, v := range r.Headers {
-				fmt.Println(v)
-			}
-			fmt.Println(string(r.Body))
-			return len(data), nil
-		}
-		return len(data), nil
+		return lengthOfData, nil
 
 	default:
 		return 0, errors.New("Unknow State")
 	}
+}
+
+func (r *Request) parseBody(data []byte) (int, error) {
+	bodyData := data
+
+	elem := r.Headers.Get("Content-Length")
+	if elem == "" {
+		r.State = requestStateDone
+		return 0, nil
+	}
+	contentLength, err := strconv.Atoi(elem)
+	if err != nil {
+		r.State = requestStateDone
+		return 0, err
+	}
+
+	if len(r.Body)+len(bodyData) > contentLength {
+		return 0, fmt.Errorf("Body Length: %d is greater than Content-Length: %d in Headers", len(r.Body)+len(bodyData), contentLength)
+	}
+
+	r.Body = append(r.Body, bodyData...)
+
+	if len(r.Body) == contentLength {
+		r.State = requestStateDone
+		fmt.Println(r.RequestLine.Method)
+		fmt.Println(r.RequestLine.RequestTarget)
+		fmt.Println(r.RequestLine.HttpVersion)
+		for _, v := range r.Headers {
+			fmt.Println(v)
+		}
+		fmt.Println(string(r.Body))
+		return len(data), nil
+	}
+	return len(data), nil
+
 }
 
 func (r *Request) parseRequestLine(data []byte) (int, error) {
