@@ -149,11 +149,11 @@ func (r *Request) parseBody(data []byte) (int, error) {
 		return 0, err
 	}
 
-	if len(r.Body)+len(bodyData) > contentLength {
+	r.Body = append(r.Body, bodyData...)
+
+	if len(r.Body) > contentLength {
 		return 0, fmt.Errorf("Body Length: %d is greater than Content-Length: %d in Headers", len(r.Body)+len(bodyData), contentLength)
 	}
-
-	r.Body = append(r.Body, bodyData...)
 
 	if len(r.Body) == contentLength {
 		r.State = requestStateDone
