@@ -34,5 +34,7 @@ func main() {
 		for k, v := range headers {
 			fmt.Printf("- %s: %s\n", k, v)
 		}
+		fmt.Println("Body:")
+		fmt.Println(string(rq.Body))
 	}
 }
