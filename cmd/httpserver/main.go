@@ -1,16 +1,11 @@
-package server
+package httpserver
 
 import (
+	"github.com/Ouacshaman/httpfromtcp/cmd/httpserver/server"
 	"log"
-	"net"
 )
 
 const port = 42069
-
-type server struct {
-	port     int
-	listener net.Listener
-}
 
 func main() {
 	server, err := server.Serve(port)
