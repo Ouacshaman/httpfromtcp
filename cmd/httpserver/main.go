@@ -1,8 +1,11 @@
-package httpserver
+package main
 
 import (
 	"github.com/Ouacshaman/httpfromtcp/cmd/httpserver/server"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 const port = 42069
