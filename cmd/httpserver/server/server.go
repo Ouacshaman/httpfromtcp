@@ -55,7 +55,7 @@ func (s *Server) listen() {
 }
 
 func (s *Server) handle(conn net.Conn) {
-	output := "HTTP/1.1 200 OK\nContent-Type: text/plain\n\nHello World!\n"
+	output := "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nHello World!\n"
 	conn.Write([]byte(output))
 	defer conn.Close()
 }
