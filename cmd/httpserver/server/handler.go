@@ -8,7 +8,7 @@ import (
 
 type HandlerError struct {
 	code    int
-	message []byte
+	message string
 }
 
 type Handler func(w io.Writer, req *request.Request) *HandlerError

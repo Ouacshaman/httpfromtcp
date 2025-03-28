@@ -62,3 +62,8 @@ func (s *Server) handle(conn net.Conn) {
 	_ = response.WriteHeaders(conn, header)
 	defer conn.Close()
 }
+
+func (h HandlerError) handleError(conn net.Conn) {
+	err := fmt.Sprintf("%d:\n%s\n", h.code, h.message)
+	conn.Write([]byte(err))
+}
