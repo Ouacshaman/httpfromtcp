@@ -19,21 +19,21 @@ const (
 func WriteStatusLine(w io.Writer, statusCode StatusCode) error {
 	switch statusCode {
 	case ok:
-		okStatus := "HTTP/1.1 200 OK"
+		okStatus := "HTTP/1.1 200 OK\r\n"
 		_, err := w.Write([]byte(okStatus))
 		if err != nil {
 			return err
 		}
 		return nil
 	case badRq:
-		badRqStatus := "HTTP/1.1 400 Bad Request"
+		badRqStatus := "HTTP/1.1 400 Bad Request\r\n"
 		_, err := w.Write([]byte(badRqStatus))
 		if err != nil {
 			return err
 		}
 		return nil
 	case internalErr:
-		intErrStatus := "HTTP/1.1 500 Internal Server Error"
+		intErrStatus := "HTTP/1.1 500 Internal Server Error\r\n"
 		_, err := w.Write([]byte(intErrStatus))
 		if err != nil {
 			return err
@@ -60,9 +60,11 @@ func GetDefaultHeaders(contentLen int) headers.Headers {
 func WriteHeaders(w io.Writer, headers headers.Headers) error {
 	res := ""
 	for k, v := range headers {
-		header := fmt.Sprintf("%s: %s\n", k, v)
+		header := fmt.Sprintf("%s: %s\r\n", k, v)
 		res += header
 	}
+
+	res += "\r\n"
 
 	_, err := w.Write([]byte(res))
 	if err != nil {
