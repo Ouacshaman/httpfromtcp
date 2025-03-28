@@ -13,7 +13,7 @@ type Server struct {
 	closed *atomic.Bool
 }
 
-func Serve(port int) (*Server, error) {
+func Serve(port int, handler Handler) (*Server, error) {
 	stringPort := fmt.Sprintf(":%d", port)
 	listen, err := net.Listen("tcp", stringPort)
 	if err != nil {
