@@ -66,10 +66,12 @@ func (s *Server) handle(conn net.Conn) {
 		return
 	}
 	var b bytes.Buffer
-	handlerErr := handlerConn(conn, rq)
-	_ = response.WriteStatusLine(conn, 200)
-	header := response.GetDefaultHeaders(0)
-	_ = response.WriteHeaders(conn, header)
+	handlerErr := handlerConn(&b, rq)
+	if handlerErr != nil {
+		errMsg := fmt.Sprintf("%d: %s", handlerErr.code, handlerErr.message)
+		conn.Write([]byte(errMsg))
+		return
+	}
 	defer conn.Close()
 }
 
@@ -81,7 +83,8 @@ func handlerConn(w io.Writer, req *request.Request) *HandlerError {
 			message: fmt.Sprintf("%v\n", err),
 		}
 	}
-	err = response.WriteHeaders(w, req.Headers)
+	header := response.GetDefaultHeaders(0)
+	err = response.WriteHeaders(w, header)
 	if err != nil {
 		return &HandlerError{
 			code:    400,
