@@ -1,10 +1,12 @@
 package server
 
 import (
+	"bytes"
 	"fmt"
 	"net"
 	"sync/atomic"
 
+	"github.com/Ouacshaman/httpfromtcp/internal/request"
 	"github.com/Ouacshaman/httpfromtcp/internal/response"
 )
 
@@ -57,6 +59,12 @@ func (s *Server) listen() {
 }
 
 func (s *Server) handle(conn net.Conn) {
+	rq, err := request.RequestFromReader(conn)
+	if err != nil {
+		fmt.Printf("Unable to read request: %v", err)
+		return
+	}
+	var b bytes.Buffer
 	_ = response.WriteStatusLine(conn, 200)
 	header := response.GetDefaultHeaders(0)
 	_ = response.WriteHeaders(conn, header)
