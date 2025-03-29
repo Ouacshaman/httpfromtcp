@@ -72,6 +72,11 @@ func (s *Server) handle(conn net.Conn) {
 		conn.Write([]byte(errMsg))
 		return
 	}
+	_, err = conn.Write(b.Bytes())
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 	defer conn.Close()
 }
 
