@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"net"
 	"sync/atomic"
 
@@ -65,10 +66,36 @@ func (s *Server) handle(conn net.Conn) {
 		return
 	}
 	var b bytes.Buffer
+	handlerErr := handlerConn(conn, rq)
 	_ = response.WriteStatusLine(conn, 200)
 	header := response.GetDefaultHeaders(0)
 	_ = response.WriteHeaders(conn, header)
 	defer conn.Close()
+}
+
+func handlerConn(w io.Writer, req *request.Request) *HandlerError {
+	err := response.WriteStatusLine(w, 200)
+	if err != nil {
+		return &HandlerError{
+			code:    400,
+			message: fmt.Sprintf("%v\n", err),
+		}
+	}
+	err = response.WriteHeaders(w, req.Headers)
+	if err != nil {
+		return &HandlerError{
+			code:    400,
+			message: fmt.Sprintf("%v\n", err),
+		}
+	}
+	_, err = w.Write(req.Body)
+	if err != nil {
+		return &HandlerError{
+			code:    400,
+			message: fmt.Sprintf("%v\n", err),
+		}
+	}
+	return nil
 }
 
 func (h HandlerError) handleError(conn net.Conn) {
