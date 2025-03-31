@@ -3,17 +3,19 @@ package server
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"net"
+	"strconv"
 	"sync/atomic"
 
+	"github.com/Ouacshaman/httpfromtcp/internal/headers"
 	"github.com/Ouacshaman/httpfromtcp/internal/request"
 	"github.com/Ouacshaman/httpfromtcp/internal/response"
 )
 
 type Server struct {
-	ln     net.Listener
-	closed *atomic.Bool
+	ln      net.Listener
+	closed  *atomic.Bool
+	handler Handler
 }
 
 func Serve(port int, handler Handler) (*Server, error) {
@@ -24,8 +26,9 @@ func Serve(port int, handler Handler) (*Server, error) {
 	}
 
 	server := &Server{
-		ln:     listen,
-		closed: &atomic.Bool{},
+		ln:      listen,
+		closed:  &atomic.Bool{},
+		handler: handler,
 	}
 
 	server.closed.Store(false)
@@ -66,47 +69,41 @@ func (s *Server) handle(conn net.Conn) {
 		return
 	}
 	var b bytes.Buffer
-	handlerErr := handlerConn(&b, rq)
+	handlerErr := s.handler(&b, rq)
 	if handlerErr != nil {
-		errMsg := fmt.Sprintf("%d: %s", handlerErr.code, handlerErr.message)
-		conn.Write([]byte(errMsg))
+		err := response.WriteStatusLine(conn, response.StatusCode(handlerErr.Code))
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		headers := make(headers.Headers)
+		headers["Content-Type"] = "text/plain"
+		headers["Content-Length"] = strconv.Itoa(len(handlerErr.Message))
+		err = response.WriteHeaders(conn, headers)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		_, err = conn.Write([]byte(handlerErr.Message))
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 		return
 	}
-	_, err = conn.Write(b.Bytes())
+	header := response.GetDefaultHeaders(len(b.Bytes()))
+	err = response.WriteStatusLine(conn, 200)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
+	err = response.WriteHeaders(conn, header)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	conn.Write(b.Bytes())
+
 	defer conn.Close()
-}
-
-func handlerConn(w io.Writer, req *request.Request) *HandlerError {
-	err := response.WriteStatusLine(w, 200)
-	if err != nil {
-		return &HandlerError{
-			code:    400,
-			message: fmt.Sprintf("%v\n", err),
-		}
-	}
-	header := response.GetDefaultHeaders(0)
-	err = response.WriteHeaders(w, header)
-	if err != nil {
-		return &HandlerError{
-			code:    400,
-			message: fmt.Sprintf("%v\n", err),
-		}
-	}
-	_, err = w.Write(req.Body)
-	if err != nil {
-		return &HandlerError{
-			code:    400,
-			message: fmt.Sprintf("%v\n", err),
-		}
-	}
-	return nil
-}
-
-func (h HandlerError) handleError(conn net.Conn) {
-	err := fmt.Sprintf("%d:\n%s\n", h.code, h.message)
-	conn.Write([]byte(err))
 }
