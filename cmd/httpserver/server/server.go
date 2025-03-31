@@ -63,6 +63,7 @@ func (s *Server) listen() {
 }
 
 func (s *Server) handle(conn net.Conn) {
+	defer conn.Close()
 	rq, err := request.RequestFromReader(conn)
 	if err != nil {
 		fmt.Printf("Unable to read request: %v", err)
@@ -104,6 +105,4 @@ func (s *Server) handle(conn net.Conn) {
 	}
 
 	conn.Write(b.Bytes())
-
-	defer conn.Close()
 }
