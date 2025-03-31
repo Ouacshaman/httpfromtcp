@@ -9,6 +9,7 @@ import (
 
 	"github.com/Ouacshaman/httpfromtcp/cmd/httpserver/server"
 	"github.com/Ouacshaman/httpfromtcp/internal/request"
+	"github.com/Ouacshaman/httpfromtcp/internal/response"
 )
 
 const port = 42069
@@ -30,14 +31,14 @@ func main() {
 func handlerConn(w io.Writer, req *request.Request) *server.HandlerError {
 	if req.RequestLine.RequestTarget == "/yourproblem" {
 		handlerErr := server.HandlerError{
-			Code:    400,
+			Code:    response.BadRq,
 			Message: "Your problem is not my problem\n",
 		}
 		return &handlerErr
 	}
 	if req.RequestLine.RequestTarget == "/myproblem" {
 		handlerErr := server.HandlerError{
-			Code:    500,
+			Code:    response.InternalErr,
 			Message: "Woopsie, my bad\n",
 		}
 		return &handlerErr

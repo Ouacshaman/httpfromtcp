@@ -78,7 +78,7 @@ func (s *Server) handle(conn net.Conn) {
 		return
 	}
 	header := response.GetDefaultHeaders(len(b.Bytes()))
-	err = response.WriteStatusLine(conn, 200)
+	err = response.WriteStatusLine(conn, response.Ok)
 	if err != nil {
 		fmt.Println(err)
 		return
