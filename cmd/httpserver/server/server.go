@@ -4,10 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"net"
-	"strconv"
 	"sync/atomic"
 
-	"github.com/Ouacshaman/httpfromtcp/internal/headers"
 	"github.com/Ouacshaman/httpfromtcp/internal/request"
 	"github.com/Ouacshaman/httpfromtcp/internal/response"
 )
@@ -66,30 +64,17 @@ func (s *Server) handle(conn net.Conn) {
 	defer conn.Close()
 	rq, err := request.RequestFromReader(conn)
 	if err != nil {
-		fmt.Printf("Unable to read request: %v", err)
+		handleErr := &HandlerError{
+			Code:    response.Ok,
+			Message: err.Error(),
+		}
+		handleErr.Write(conn)
 		return
 	}
 	var b bytes.Buffer
 	handlerErr := s.handler(&b, rq)
 	if handlerErr != nil {
-		err := response.WriteStatusLine(conn, response.StatusCode(handlerErr.Code))
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		headers := make(headers.Headers)
-		headers["Content-Type"] = "text/plain"
-		headers["Content-Length"] = strconv.Itoa(len(handlerErr.Message))
-		err = response.WriteHeaders(conn, headers)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		_, err = conn.Write([]byte(handlerErr.Message))
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
+		handlerErr.Write(conn)
 		return
 	}
 	header := response.GetDefaultHeaders(len(b.Bytes()))

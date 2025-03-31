@@ -11,28 +11,28 @@ import (
 type StatusCode int
 
 const (
-	ok          StatusCode = 200
-	badRq       StatusCode = 400
-	internalErr StatusCode = 500
+	Ok          StatusCode = 200
+	BadRq       StatusCode = 400
+	InternalErr StatusCode = 500
 )
 
 func WriteStatusLine(w io.Writer, statusCode StatusCode) error {
 	switch statusCode {
-	case ok:
+	case Ok:
 		okStatus := "HTTP/1.1 200 OK\r\n"
 		_, err := w.Write([]byte(okStatus))
 		if err != nil {
 			return err
 		}
 		return nil
-	case badRq:
+	case BadRq:
 		badRqStatus := "HTTP/1.1 400 Bad Request\r\n"
 		_, err := w.Write([]byte(badRqStatus))
 		if err != nil {
 			return err
 		}
 		return nil
-	case internalErr:
+	case InternalErr:
 		intErrStatus := "HTTP/1.1 500 Internal Server Error\r\n"
 		_, err := w.Write([]byte(intErrStatus))
 		if err != nil {
