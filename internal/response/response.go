@@ -3,6 +3,7 @@ package response
 import (
 	"fmt"
 	"io"
+	"net"
 	"strconv"
 
 	"github.com/Ouacshaman/httpfromtcp/internal/headers"
@@ -25,35 +26,35 @@ const (
 )
 
 type Writer struct {
-	w io.Writer
+	W io.Writer
 }
 
 func (w *Writer) WriteStatusLine(statusCode StatusCode) error {
 	switch statusCode {
 	case Ok:
 		okStatus := "HTTP/1.1 200 OK\r\n"
-		_, err := w.w.Write([]byte(okStatus))
+		_, err := w.W.Write([]byte(okStatus))
 		if err != nil {
 			return err
 		}
 		return nil
 	case BadRq:
 		badRqStatus := "HTTP/1.1 400 Bad Request\r\n"
-		_, err := w.w.Write([]byte(badRqStatus))
+		_, err := w.W.Write([]byte(badRqStatus))
 		if err != nil {
 			return err
 		}
 		return nil
 	case InternalErr:
 		intErrStatus := "HTTP/1.1 500 Internal Server Error\r\n"
-		_, err := w.w.Write([]byte(intErrStatus))
+		_, err := w.W.Write([]byte(intErrStatus))
 		if err != nil {
 			return err
 		}
 		return nil
 
 	default:
-		_, err := w.w.Write([]byte(""))
+		_, err := w.W.Write([]byte(""))
 		if err != nil {
 			return err
 		}
@@ -78,7 +79,7 @@ func (w *Writer) WriteHeaders(headers headers.Headers) error {
 
 	res += "\r\n"
 
-	_, err := w.w.Write([]byte(res))
+	_, err := w.W.Write([]byte(res))
 	if err != nil {
 		return err
 	}
@@ -86,9 +87,30 @@ func (w *Writer) WriteHeaders(headers headers.Headers) error {
 }
 
 func (w *Writer) WriteBody(p []byte) (int, error) {
-	n, err := w.w.Write(p)
+	n, err := w.W.Write(p)
 	if err != nil {
 		return 0, err
 	}
 	return n, nil
+}
+
+func (w *Writer) WriteError(code StatusCode, message string) {
+	err := w.WriteStatusLine(code)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	headers := make(headers.Headers)
+	headers["Content-Type"] = "text/plain"
+	headers["Content-Length"] = strconv.Itoa(len(message))
+	err = w.WriteHeaders(headers)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	_, err = w.W.Write([]byte(message))
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 }

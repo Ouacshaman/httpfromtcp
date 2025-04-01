@@ -62,13 +62,12 @@ func (s *Server) listen() {
 
 func (s *Server) handle(conn net.Conn) {
 	defer conn.Close()
+	w := response.Writer{
+		W: conn,
+	}
 	rq, err := request.RequestFromReader(conn)
 	if err != nil {
-		handleErr := &HandlerError{
-			Code:    response.Ok,
-			Message: err.Error(),
-		}
-		handleErr.Write(conn)
+		w.WriteError(response.BadRq, err.Error())
 		return
 	}
 	var b bytes.Buffer
