@@ -1,14 +1,9 @@
 package server
 
 import (
-	"fmt"
-	"io"
-	"net"
-	"strconv"
-
-	"github.com/Ouacshaman/httpfromtcp/internal/headers"
 	"github.com/Ouacshaman/httpfromtcp/internal/request"
 	"github.com/Ouacshaman/httpfromtcp/internal/response"
+	"io"
 )
 
 type HandlerError struct {
@@ -16,8 +11,9 @@ type HandlerError struct {
 	Message string
 }
 
-type Handler func(w io.Writer, req *request.Request) *HandlerError
+type Handler func(w io.Writer, req *request.Request)
 
+/*
 func (he *HandlerError) Write(conn net.Conn) {
 	err := response.WriteStatusLine(conn, he.Code)
 	if err != nil {
@@ -39,3 +35,4 @@ func (he *HandlerError) Write(conn net.Conn) {
 	}
 
 }
+*/
