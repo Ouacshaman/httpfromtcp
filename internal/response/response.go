@@ -16,32 +16,44 @@ const (
 	InternalErr StatusCode = 500
 )
 
-func WriteStatusLine(w io.Writer, statusCode StatusCode) error {
+type WriterStatusCode int
+
+const (
+	StatusWriteSL WriterStatusCode = iota
+	StatusWriteHeader
+	StautsWriteBody
+)
+
+type Writer struct {
+	w io.Writer
+}
+
+func (w *Writer) WriteStatusLine(statusCode StatusCode) error {
 	switch statusCode {
 	case Ok:
 		okStatus := "HTTP/1.1 200 OK\r\n"
-		_, err := w.Write([]byte(okStatus))
+		_, err := w.w.Write([]byte(okStatus))
 		if err != nil {
 			return err
 		}
 		return nil
 	case BadRq:
 		badRqStatus := "HTTP/1.1 400 Bad Request\r\n"
-		_, err := w.Write([]byte(badRqStatus))
+		_, err := w.w.Write([]byte(badRqStatus))
 		if err != nil {
 			return err
 		}
 		return nil
 	case InternalErr:
 		intErrStatus := "HTTP/1.1 500 Internal Server Error\r\n"
-		_, err := w.Write([]byte(intErrStatus))
+		_, err := w.w.Write([]byte(intErrStatus))
 		if err != nil {
 			return err
 		}
 		return nil
 
 	default:
-		_, err := w.Write([]byte(""))
+		_, err := w.w.Write([]byte(""))
 		if err != nil {
 			return err
 		}
@@ -57,7 +69,7 @@ func GetDefaultHeaders(contentLen int) headers.Headers {
 	return header
 }
 
-func WriteHeaders(w io.Writer, headers headers.Headers) error {
+func (w *Writer) WriteHeaders(headers headers.Headers) error {
 	res := ""
 	for k, v := range headers {
 		header := fmt.Sprintf("%s: %s\r\n", k, v)
@@ -66,9 +78,17 @@ func WriteHeaders(w io.Writer, headers headers.Headers) error {
 
 	res += "\r\n"
 
-	_, err := w.Write([]byte(res))
+	_, err := w.w.Write([]byte(res))
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (w *Writer) WriteBody(p []byte) (int, error) {
+	n, err := w.w.Write(p)
+	if err != nil {
+		return 0, err
+	}
+	return n, nil
 }
