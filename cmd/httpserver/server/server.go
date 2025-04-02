@@ -63,7 +63,8 @@ func (s *Server) listen() {
 func (s *Server) handle(conn net.Conn) {
 	defer conn.Close()
 	w := response.Writer{
-		W: conn,
+		W:                conn,
+		StatusCodeWriter: response.StatusWriteSL,
 	}
 	rq, err := request.RequestFromReader(conn)
 	if err != nil {
@@ -71,22 +72,29 @@ func (s *Server) handle(conn net.Conn) {
 		return
 	}
 	var b bytes.Buffer
-	handlerErr := s.handler(&b, rq)
-	if handlerErr != nil {
-		handlerErr.Write(conn)
-		return
-	}
-	header := response.GetDefaultHeaders(len(b.Bytes()))
-	err = response.WriteStatusLine(conn, response.Ok)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	err = response.WriteHeaders(conn, header)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	s.handler(&b, rq)
+	//header := response.GetDefaultHeaders(len(b.Bytes()))
+	for w.StatusCodeWriter != response.StatusComplete {
+		switch w.StatusCodeWriter {
+		case response.StatusWriteSL:
+			err := w.WriteStatusLine(response.Ok)
+			if err != nil {
+				fmt.Println(err)
+			}
+			w.StatusCodeWriter = response.StatusWriteHeader
+		case response.StatusWriteHeader:
+			header := response.GetDefaultHeaders(len(b.Bytes()))
+			err := w.WriteHeaders(header)
+			if err != nil {
+				fmt.Println(err)
+			}
+			w.StatusCodeWriter = response.StatusWriteBody
 
-	conn.Write(b.Bytes())
+		case response.StatusWriteBody:
+			w.WriteBody(b.Bytes())
+			w.StatusCodeWriter = response.StatusComplete
+		default:
+			return
+		}
+	}
 }

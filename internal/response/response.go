@@ -3,7 +3,6 @@ package response
 import (
 	"fmt"
 	"io"
-	"net"
 	"strconv"
 
 	"github.com/Ouacshaman/httpfromtcp/internal/headers"
@@ -22,11 +21,13 @@ type WriterStatusCode int
 const (
 	StatusWriteSL WriterStatusCode = iota
 	StatusWriteHeader
-	StautsWriteBody
+	StatusWriteBody
+	StatusComplete
 )
 
 type Writer struct {
-	W io.Writer
+	W                io.Writer
+	StatusCodeWriter WriterStatusCode
 }
 
 func (w *Writer) WriteStatusLine(statusCode StatusCode) error {
