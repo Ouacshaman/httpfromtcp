@@ -5,10 +5,12 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 
 	"github.com/Ouacshaman/httpfromtcp/cmd/httpserver/server"
 	"github.com/Ouacshaman/httpfromtcp/internal/request"
+	"github.com/Ouacshaman/httpfromtcp/internal/response"
 )
 
 const port = 42069
@@ -28,6 +30,8 @@ func main() {
 }
 
 func handlerConn(w io.Writer, req *request.Request) {
+	req.Headers["Connection"] = "close"
+	req.Headers["Content-Type"] = "text/html"
 	if req.RequestLine.RequestTarget == "/yourproblem" {
 		htmlResponse := `<html>
   <head>
@@ -39,6 +43,8 @@ func handlerConn(w io.Writer, req *request.Request) {
   </body>
 </html>`
 		w.Write([]byte(htmlResponse))
+		req.Status = response.BadRq
+		req.Headers["Content-Length"] = strconv.Itoa(len(htmlResponse))
 		return
 	}
 	if req.RequestLine.RequestTarget == "/myproblem" {
@@ -51,7 +57,9 @@ func handlerConn(w io.Writer, req *request.Request) {
     <p>Okay, you know what? This one is on me.</p>
   </body>
 </html>`
+		req.Status = response.InternalErr
 		w.Write([]byte(htmlResponse))
+		req.Headers["Content-Length"] = strconv.Itoa(len(htmlResponse))
 		return
 	}
 	okStatus := `<html>
@@ -64,5 +72,7 @@ func handlerConn(w io.Writer, req *request.Request) {
   </body>
 </html>`
 	w.Write([]byte(okStatus))
+	req.Status = response.Ok
+	req.Headers["Content-Length"] = strconv.Itoa(len(okStatus))
 	return
 }

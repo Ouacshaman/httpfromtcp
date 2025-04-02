@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/Ouacshaman/httpfromtcp/internal/headers"
+	"github.com/Ouacshaman/httpfromtcp/internal/response"
 )
 
 type State int
@@ -25,6 +26,7 @@ type Request struct {
 	RequestLine RequestLine
 	Headers     headers.Headers
 	Body        []byte
+	Status      response.StatusCode
 }
 
 type RequestLine struct {

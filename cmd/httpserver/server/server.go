@@ -73,18 +73,17 @@ func (s *Server) handle(conn net.Conn) {
 	}
 	var b bytes.Buffer
 	s.handler(&b, rq)
-	//header := response.GetDefaultHeaders(len(b.Bytes()))
 	for w.StatusCodeWriter != response.StatusComplete {
 		switch w.StatusCodeWriter {
 		case response.StatusWriteSL:
-			err := w.WriteStatusLine(response.Ok)
+			err := w.WriteStatusLine(rq.Status)
 			if err != nil {
 				fmt.Println(err)
 			}
 			w.StatusCodeWriter = response.StatusWriteHeader
 		case response.StatusWriteHeader:
-			header := response.GetDefaultHeaders(len(b.Bytes()))
-			err := w.WriteHeaders(header)
+			//header := response.GetDefaultHeaders(len(b.Bytes()))
+			err := w.WriteHeaders(rq.Headers)
 			if err != nil {
 				fmt.Println(err)
 			}
