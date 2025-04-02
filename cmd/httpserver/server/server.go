@@ -82,7 +82,6 @@ func (s *Server) handle(conn net.Conn) {
 			}
 			w.StatusCodeWriter = response.StatusWriteHeader
 		case response.StatusWriteHeader:
-			//header := response.GetDefaultHeaders(len(b.Bytes()))
 			err := w.WriteHeaders(rq.Headers)
 			if err != nil {
 				fmt.Println(err)
