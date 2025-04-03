@@ -89,8 +89,29 @@ func (s *Server) handle(conn net.Conn) {
 			w.StatusCodeWriter = response.StatusWriteBody
 
 		case response.StatusWriteBody:
-			w.WriteBody(b.Bytes())
-			w.StatusCodeWriter = response.StatusComplete
+			elem := rq.Headers.Get("Transfer-Encoding")
+			if elem == "chunked" {
+				total := 0
+				for total != len(b.Bytes()) {
+					n, err := w.WriteChunkedBody(b.Bytes())
+					if err != nil {
+						fmt.Println(err)
+						return
+					}
+					total += n
+					if total == len(b.Bytes())-5 {
+						n, err := w.WriteChunkedBody(b.Bytes())
+						if err != nil {
+							fmt.Println(err)
+							return
+						}
+						total += n
+					}
+				}
+			} else {
+				w.WriteBody(b.Bytes())
+				w.StatusCodeWriter = response.StatusComplete
+			}
 		default:
 			return
 		}
