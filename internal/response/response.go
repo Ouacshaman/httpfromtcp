@@ -118,16 +118,14 @@ func (w *Writer) WriteError(code StatusCode, message string) {
 }
 
 func (w *Writer) WriteChunkedBody(p []byte) (int, error) {
-	temp := p
-	idx := bytes.Index(temp, []byte("\r\n"))
-	hexN, err := strconv.ParseInt(string(p[:idx]), 16, 64)
+	l := len(p)
+	chunked := fmt.Sprintf("%X\r\n%s\r\n", l, string(p))
+	n, err := w.W.Write([]byte(chunked))
 	if err != nil {
 		return 0, err
 	}
 
-	w.W.Write(temp[idx : idx+int(hexN)])
-
-	return int(hexN) + 2 + len(temp[:idx]), nil
+	return n, nil
 }
 
 func (w *Writer) WriteChunkedBodyDone() (int, error) {
