@@ -1,11 +1,14 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 
 	"github.com/Ouacshaman/httpfromtcp/cmd/httpserver/server"
@@ -75,4 +78,29 @@ func handlerConn(w io.Writer, req *request.Request) {
 	req.Status = response.Ok
 	req.Headers["Content-Length"] = strconv.Itoa(len(okStatus))
 	return
+}
+
+func proxyHttpbinHandler(w io.Writer, req *request.Request) {
+	target := req.RequestLine.RequestTarget
+	if strings.HasPrefix(target, "/httpbin/") {
+		target = strings.TrimPrefix(target, "/httpbin/")
+	} else {
+		fmt.Println("Does not have /httpbin/ prefix")
+		return
+	}
+
+	_, ok := req.Headers["Content-Length"]
+	if ok {
+		delete(req.Headers, "Content-Length")
+	}
+
+	req.Headers["Transfer-Encoding"] = "chunked"
+
+	url := fmt.Sprintf("https://httpbin.org/%s", target)
+	resp, err := http.Get(url)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(resp.Body)
 }

@@ -1,7 +1,7 @@
 package response
 
 import (
-	"bytes"
+	//	"bytes"
 	"fmt"
 	"io"
 	"strconv"
