@@ -81,6 +81,7 @@ func handlerConn(w io.Writer, req *request.Request) {
 }
 
 func proxyHttpbinHandler(w io.Writer, req *request.Request) {
+	buf := make([]byte, 1028)
 	target := req.RequestLine.RequestTarget
 	if strings.HasPrefix(target, "/httpbin/") {
 		target = strings.TrimPrefix(target, "/httpbin/")
@@ -102,5 +103,15 @@ func proxyHttpbinHandler(w io.Writer, req *request.Request) {
 		fmt.Println(err)
 		return
 	}
-	fmt.Println(resp.Body)
+	n, err := resp.Body.Read(buf)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Printf("Data read from /httpbin: %d\n", n)
+	_, err = w.Write(buf)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 }

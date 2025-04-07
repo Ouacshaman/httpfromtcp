@@ -79,17 +79,37 @@ func (s *Server) handle(conn net.Conn) {
 			err := w.WriteStatusLine(rq.Status)
 			if err != nil {
 				fmt.Println(err)
+				return
 			}
 			w.StatusCodeWriter = response.StatusWriteHeader
 		case response.StatusWriteHeader:
 			err := w.WriteHeaders(rq.Headers)
 			if err != nil {
 				fmt.Println(err)
+				return
 			}
 			w.StatusCodeWriter = response.StatusWriteBody
 
 		case response.StatusWriteBody:
-			w.WriteBody(b.Bytes())
+			_, ok := rq.Headers["Transfer-Encoding"]
+			if !ok {
+				_, err := w.WriteBody(b.Bytes())
+				if err != nil {
+					fmt.Println(err)
+					return
+				}
+				w.StatusCodeWriter = response.StatusComplete
+			}
+			_, err := w.WriteChunkedBody(b.Bytes())
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			_, err = w.WriteChunkedBodyDone()
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
 			w.StatusCodeWriter = response.StatusComplete
 		default:
 			return
