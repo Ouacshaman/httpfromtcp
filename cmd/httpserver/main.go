@@ -19,7 +19,7 @@ import (
 const port = 42069
 
 func main() {
-	server, err := server.Serve(port, handlerConn)
+	server, err := server.Serve(port, proxyHttpbinHandler)
 	if err != nil {
 		log.Fatalf("Error starting server: %v", err)
 	}
