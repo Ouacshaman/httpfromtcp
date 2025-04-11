@@ -81,7 +81,6 @@ func handlerConn(w io.Writer, req *request.Request) {
 }
 
 func proxyHttpbinHandler(w io.Writer, req *request.Request) {
-	buf := make([]byte, 1028)
 	target := req.RequestLine.RequestTarget
 	if strings.HasPrefix(target, "/httpbin/") {
 		target = strings.TrimPrefix(target, "/httpbin/")
@@ -90,12 +89,10 @@ func proxyHttpbinHandler(w io.Writer, req *request.Request) {
 		return
 	}
 
-	_, ok := req.Headers["Content-Length"]
-	if ok {
-		delete(req.Headers, "Content-Length")
+	writer := response.Writer{
+		W:                w,
+		StatusCodeWriter: response.StatusWriteSL,
 	}
-
-	req.Headers["Transfer-Encoding"] = "chunked"
 
 	url := fmt.Sprintf("https://httpbin.org/%s", target)
 	resp, err := http.Get(url)
@@ -103,13 +100,52 @@ func proxyHttpbinHandler(w io.Writer, req *request.Request) {
 		fmt.Println(err)
 		return
 	}
-	n, err := resp.Body.Read(buf)
+
+	defer resp.Body.Close()
+
+	req.Status = response.StatusCode(resp.StatusCode)
+
+	req.Headers = make(map[string]string)
+	for k, v := range resp.Header {
+		if strings.ToLower(k) != "content-length" {
+			req.Headers[k] = v[0]
+		}
+	}
+
+	req.Headers["Transfer-Encoding"] = "chunked"
+
+	buf := make([]byte, 1028)
+
+	err = writer.WriteStatusLine(req.Status)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	fmt.Printf("Data read from /httpbin: %d\n", n)
-	_, err = w.Write(buf)
+	err = writer.WriteHeaders(req.Headers)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	for {
+		n, err := resp.Body.Read(buf)
+		if n > 0 {
+			_, err := writer.WriteChunkedBody(buf[:n])
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+		}
+
+		if err != nil {
+			if err != io.EOF {
+				fmt.Println(err)
+			}
+			break
+		}
+	}
+
+	_, err = writer.WriteChunkedBodyDone()
 	if err != nil {
 		fmt.Println(err)
 		return
