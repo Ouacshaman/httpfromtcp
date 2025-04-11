@@ -1,7 +1,7 @@
 package server
 
 import (
-	"bytes"
+	//"bytes"
 	"fmt"
 	"net"
 	"sync/atomic"
@@ -71,9 +71,9 @@ func (s *Server) handle(conn net.Conn) {
 		w.WriteError(response.BadRq, err.Error())
 		return
 	}
-	var b bytes.Buffer
-	s.handler(&b, rq)
-	for w.StatusCodeWriter != response.StatusComplete {
+	// var b bytes.Buffer
+	s.handler(w.W, rq)
+	/*for w.StatusCodeWriter != response.StatusComplete {
 		switch w.StatusCodeWriter {
 		case response.StatusWriteSL:
 			err := w.WriteStatusLine(rq.Status)
@@ -114,5 +114,5 @@ func (s *Server) handle(conn net.Conn) {
 		default:
 			return
 		}
-	}
+	}*/
 }
