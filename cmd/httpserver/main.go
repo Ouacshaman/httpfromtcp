@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"log"
@@ -19,7 +20,7 @@ import (
 const port = 42069
 
 func main() {
-	server, err := server.Serve(port, proxyHttpbinHandler)
+	server, err := server.Serve(port, handlerConn)
 	if err != nil {
 		log.Fatalf("Error starting server: %v", err)
 	}
@@ -38,52 +39,8 @@ func handlerConn(w io.Writer, req *request.Request) {
 		StatusCodeWriter: response.StatusWriteSL,
 	}
 
-	req.Headers["Connection"] = "close"
-	req.Headers["Content-Type"] = "text/html"
-	if req.RequestLine.RequestTarget == "/yourproblem" {
-		htmlResponse := `<html>
-  <head>
-    <title>400 Bad Request</title>
-  </head>
-  <body>
-    <h1>Bad Request</h1>
-    <p>Your request honestly kinda sucked.</p>
-  </body>
-</html>`
-		w.Write([]byte(htmlResponse))
-		req.Status = response.BadRq
-		req.Headers["Content-Length"] = strconv.Itoa(len(htmlResponse))
-		return
-	}
-	if req.RequestLine.RequestTarget == "/myproblem" {
-		htmlResponse := `<html>
-  <head>
-    <title>500 Internal Server Error</title>
-  </head>
-  <body>
-    <h1>Internal Server Error</h1>
-    <p>Okay, you know what? This one is on me.</p>
-  </body>
-</html>`
-		req.Status = response.InternalErr
-		w.Write([]byte(htmlResponse))
-		req.Headers["Content-Length"] = strconv.Itoa(len(htmlResponse))
-		return
-	}
-	okStatus := `<html>
-  <head>
-    <title>200 OK</title>
-  </head>
-  <body>
-    <h1>Success!</h1>
-    <p>Your request was an absolute banger.</p>
-  </body>
-</html>`
-	w.Write([]byte(okStatus))
-	req.Status = response.Ok
-	req.Headers["Content-Length"] = strconv.Itoa(len(okStatus))
-	return
-
+	var b bytes.Buffer
+	defaultResponseHandler(&b, req)
 	for writer.StatusCodeWriter != response.StatusComplete {
 		switch writer.StatusCodeWriter {
 		case response.StatusWriteSL:
@@ -113,51 +70,6 @@ func handlerConn(w io.Writer, req *request.Request) {
 			return
 		}
 	}
-	req.Headers["Connection"] = "close"
-	req.Headers["Content-Type"] = "text/html"
-	if req.RequestLine.RequestTarget == "/yourproblem" {
-		htmlResponse := `<html>
-  <head>
-    <title>400 Bad Request</title>
-  </head>
-  <body>
-    <h1>Bad Request</h1>
-    <p>Your request honestly kinda sucked.</p>
-  </body>
-</html>`
-		w.Write([]byte(htmlResponse))
-		req.Status = response.BadRq
-		req.Headers["Content-Length"] = strconv.Itoa(len(htmlResponse))
-		return
-	}
-	if req.RequestLine.RequestTarget == "/myproblem" {
-		htmlResponse := `<html>
-  <head>
-    <title>500 Internal Server Error</title>
-  </head>
-  <body>
-    <h1>Internal Server Error</h1>
-    <p>Okay, you know what? This one is on me.</p>
-  </body>
-</html>`
-		req.Status = response.InternalErr
-		w.Write([]byte(htmlResponse))
-		req.Headers["Content-Length"] = strconv.Itoa(len(htmlResponse))
-		return
-	}
-	okStatus := `<html>
-  <head>
-    <title>200 OK</title>
-  </head>
-  <body>
-    <h1>Success!</h1>
-    <p>Your request was an absolute banger.</p>
-  </body>
-</html>`
-	w.Write([]byte(okStatus))
-	req.Status = response.Ok
-	req.Headers["Content-Length"] = strconv.Itoa(len(okStatus))
-	return
 }
 
 func defaultResponseHandler(w io.Writer, req *request.Request) {
