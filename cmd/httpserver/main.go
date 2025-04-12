@@ -20,7 +20,7 @@ import (
 const port = 42069
 
 func main() {
-	server, err := server.Serve(port, handlerConn)
+	server, err := server.Serve(port, handlerHandler)
 	if err != nil {
 		log.Fatalf("Error starting server: %v", err)
 	}
@@ -31,6 +31,16 @@ func main() {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	<-sigChan
 	log.Println("Server gracefully stopped")
+}
+
+func handlerHandler(w io.Writer, req *request.Request) {
+	if strings.Contains(req.RequestLine.RequestTarget, "httpbin") {
+		proxyHttpbinHandler(w, req)
+		return
+	} else {
+		handlerConn(w, req)
+		return
+	}
 }
 
 func handlerConn(w io.Writer, req *request.Request) {
