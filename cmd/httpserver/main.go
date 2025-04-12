@@ -34,7 +34,7 @@ func main() {
 }
 
 func handlerHandler(w io.Writer, req *request.Request) {
-	if strings.Contains(req.RequestLine.RequestTarget, "httpbin") {
+	if strings.HasPrefix(req.RequestLine.RequestTarget, "/httpbin/") {
 		proxyHttpbinHandler(w, req)
 		return
 	} else {
