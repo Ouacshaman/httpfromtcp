@@ -23,6 +23,7 @@ const (
 	StatusWriteSL WriterStatusCode = iota
 	StatusWriteHeader
 	StatusWriteBody
+	StatusWriteTrailer
 	StatusComplete
 )
 

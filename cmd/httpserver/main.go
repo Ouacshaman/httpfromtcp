@@ -207,6 +207,8 @@ func proxyHttpbinHandler(w io.Writer, req *request.Request) {
 				fmt.Println(err)
 				return
 			}
+			writer.StatusCodeWriter = response.StatusWriteTrailer
+		case response.StatusWriteTrailer:
 			writer.StatusCodeWriter = response.StatusComplete
 		default:
 			return
