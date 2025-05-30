@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"log"
@@ -13,6 +14,7 @@ import (
 	"syscall"
 
 	"github.com/Ouacshaman/httpfromtcp/cmd/httpserver/server"
+	"github.com/Ouacshaman/httpfromtcp/internal/headers"
 	"github.com/Ouacshaman/httpfromtcp/internal/request"
 	"github.com/Ouacshaman/httpfromtcp/internal/response"
 )
@@ -209,7 +211,12 @@ func proxyHttpbinHandler(w io.Writer, req *request.Request) {
 			}
 			writer.StatusCodeWriter = response.StatusWriteTrailer
 		case response.StatusWriteTrailer:
-			err = writer.WriteTrailers(req.Trailers)
+			trailer := make(headers.Headers)
+			sum := sha256.Sum256(buf)
+			sumStr := string(sum[:])
+			trailer["X-Content-SHA256"] = sumStr
+			trailer["X-Content-Length"] = strconv.Itoa(len(sumStr))
+			err := writer.WriteTrailers(trailer)
 			if err != nil {
 				fmt.Println(err)
 				return
