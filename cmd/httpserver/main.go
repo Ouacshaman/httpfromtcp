@@ -209,6 +209,11 @@ func proxyHttpbinHandler(w io.Writer, req *request.Request) {
 			}
 			writer.StatusCodeWriter = response.StatusWriteTrailer
 		case response.StatusWriteTrailer:
+			err = writer.WriteTrailers(req.Trailers)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
 			writer.StatusCodeWriter = response.StatusComplete
 		default:
 			return

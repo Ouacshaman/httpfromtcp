@@ -1,6 +1,9 @@
 package response
 
-import "github.com/Ouacshaman/httpfromtcp/internal/headers"
+import (
+	"fmt"
+	"github.com/Ouacshaman/httpfromtcp/internal/headers"
+)
 
 func (w *Writer) WriteTrailers(h headers.Headers) error {
 	res := ""

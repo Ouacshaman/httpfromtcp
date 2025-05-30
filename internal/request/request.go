@@ -19,6 +19,7 @@ const (
 	requestStateDone
 	requestStateParsingHeaders
 	requestStateParsingBody
+	requestStateParsingTrailers
 )
 
 type Request struct {
@@ -26,6 +27,7 @@ type Request struct {
 	RequestLine RequestLine
 	Headers     headers.Headers
 	Body        []byte
+	Trailers    headers.Headers
 	Status      response.StatusCode
 }
 
@@ -44,6 +46,7 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 	rq := &Request{State: requestStateInitialized}
 	rq.Headers = make(headers.Headers)
 	rq.Body = make([]byte, 0)
+	rq.Trailers = make(headers.Headers)
 
 	for rq.State != requestStateDone {
 		if readToIndex >= len(buf) {
@@ -131,7 +134,15 @@ func (r *Request) parseSingle(data []byte) (int, error) {
 		}
 
 		return lengthOfData, nil
-
+	case requestStateParsingTrailers:
+		bytesParsed, done, err := r.Trailers.Parse(data)
+		if err != nil {
+			return 0, err
+		}
+		if done {
+			r.State = requestStateDone
+		}
+		return bytesParsed, nil
 	default:
 		return 0, errors.New("Unknow State")
 	}
@@ -142,12 +153,12 @@ func (r *Request) parseBody(data []byte) (int, error) {
 
 	elem := r.Headers.Get("Content-Length")
 	if elem == "" {
-		r.State = requestStateDone
+		r.State = requestStateParsingTrailers
 		return 0, nil
 	}
 	contentLength, err := strconv.Atoi(elem)
 	if err != nil {
-		r.State = requestStateDone
+		r.State = requestStateParsingTrailers
 		return 0, err
 	}
 
