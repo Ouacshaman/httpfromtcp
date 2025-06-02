@@ -166,8 +166,10 @@ func proxyHttpbinHandler(w io.Writer, req *request.Request) {
 	}
 
 	req.Headers["Transfer-Encoding"] = "chunked"
+	req.Headers["Trailer"] = "X-Content-SHA256, X-Content-Length"
 
 	buf := make([]byte, 1028)
+	storage := []byte{}
 	for writer.StatusCodeWriter != response.StatusComplete {
 		switch writer.StatusCodeWriter {
 		case response.StatusWriteSL:
@@ -189,6 +191,7 @@ func proxyHttpbinHandler(w io.Writer, req *request.Request) {
 			for {
 				n, err := resp.Body.Read(buf)
 				if n > 0 {
+					storage = append(storage, buf[:n]...)
 					_, err := writer.WriteChunkedBody(buf[:n])
 					if err != nil {
 						fmt.Println(err)
@@ -212,10 +215,10 @@ func proxyHttpbinHandler(w io.Writer, req *request.Request) {
 			writer.StatusCodeWriter = response.StatusWriteTrailer
 		case response.StatusWriteTrailer:
 			trailer := make(headers.Headers)
-			sum := sha256.Sum256(buf)
-			sumStr := string(sum[:])
+			sum := sha256.Sum256(storage)
+			sumStr := fmt.Sprintf("%x", sum)
 			trailer["X-Content-SHA256"] = sumStr
-			trailer["X-Content-Length"] = strconv.Itoa(len(sumStr))
+			trailer["X-Content-Length"] = strconv.Itoa(len(storage))
 			err := writer.WriteTrailers(trailer)
 			if err != nil {
 				fmt.Println(err)
