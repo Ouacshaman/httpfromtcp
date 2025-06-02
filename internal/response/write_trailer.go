@@ -8,11 +8,11 @@ import (
 func (w *Writer) WriteTrailers(h headers.Headers) error {
 	res := ""
 	for k, v := range h {
-		header := fmt.Sprintf("%s: %s\n", k, v)
+		header := fmt.Sprintf("%s: %s\r\n", k, v)
 		res += header
 	}
 
-	res += "\r\n"
+	res += "\r\n\r\n"
 
 	_, err := w.W.Write([]byte(res))
 	if err != nil {

@@ -119,18 +119,30 @@ func (w *Writer) WriteError(code StatusCode, message string) {
 }
 
 func (w *Writer) WriteChunkedBody(p []byte) (int, error) {
-	l := len(p)
-	chunked := fmt.Sprintf("%X\r\n%s\r\n", l, string(p))
-	n, err := w.W.Write([]byte(chunked))
+	total := 0
+	line1 := fmt.Sprintf("%X\r\n", len(p))
+	n, err := w.W.Write([]byte(line1))
 	if err != nil {
 		return 0, err
 	}
+	total += n
+	n, err = w.W.Write([]byte(p))
+	if err != nil {
+		return 0, err
+	}
+	total += n
 
-	return n, nil
+	n, err = w.W.Write([]byte("\r\n"))
+	if err != nil {
+		return 0, err
+	}
+	total += n
+
+	return total, nil
 }
 
 func (w *Writer) WriteChunkedBodyDone() (int, error) {
-	n, err := w.W.Write([]byte("0\r\n\r\n"))
+	n, err := w.W.Write([]byte("0\r\n"))
 	if err != nil {
 		return 0, err
 	}
