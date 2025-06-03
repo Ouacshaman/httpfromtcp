@@ -39,10 +39,23 @@ func handlerHandler(w io.Writer, req *request.Request) {
 	if strings.HasPrefix(req.RequestLine.RequestTarget, "/httpbin/") {
 		proxyHttpbinHandler(w, req)
 		return
+	} else if strings.HasPrefix(req.RequestLine.RequestTarget, "/video") {
+		handlerVideo(w, req)
+		return
 	} else {
 		handlerConn(w, req)
 		return
 	}
+}
+
+func handlerVideo(w io.Writer, req *request.Request) {
+	req.Headers["Content-Type"] = "video/mp4"
+	data, err := os.ReadFile("../../assets/vim.mp4")
+	if err != nil {
+		log.Fatal(err)
+	}
+	w.Write(data)
+	return
 }
 
 func handlerConn(w io.Writer, req *request.Request) {
