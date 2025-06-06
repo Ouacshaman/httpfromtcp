@@ -49,8 +49,16 @@ func handlerHandler(w io.Writer, req *request.Request) {
 }
 
 func handlerVideo(w io.Writer, req *request.Request) {
+	target := req.RequestLine.RequestTarget
+	if strings.HasPrefix(target, "/video/") {
+		target = strings.TrimPrefix(target, "/video/")
+	} else {
+		fmt.Println("Does not have /httpbin/ prefix")
+		return
+	}
+
 	req.Headers["Content-Type"] = "video/mp4"
-	data, err := os.ReadFile("../../assets/vim.mp4")
+	data, err := os.ReadFile("./assets/vim.mp4")
 	if err != nil {
 		log.Fatal(err)
 	}
