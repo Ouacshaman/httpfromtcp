@@ -49,46 +49,26 @@ func handlerHandler(w io.Writer, req *request.Request) {
 }
 
 func handlerVideo(w io.Writer, req *request.Request) {
-	target := req.RequestLine.RequestTarget
-	if strings.HasPrefix(target, "/video/") {
-		target = strings.TrimPrefix(target, "/video/")
-	} else {
-		fmt.Println("Does not have /httpbin/ prefix")
-		return
-	}
 
 	writer := response.Writer{
 		W:                w,
 		StatusCodeWriter: response.StatusWriteSL,
 	}
 
-	url := fmt.Sprintf("http://localhost:42069/%s", target)
-	resp, err := http.Get(url)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	defer resp.Body.Close()
-
-	req.Status = response.StatusCode(resp.StatusCode)
-
-	req.Headers = make(map[string]string)
-	req.Headers["Content-Type"] = "video/mp4"
-
-	buf := make([]byte, 2024)
-	storage := []byte{}
 	for writer.StatusCodeWriter != response.StatusComplete {
 		switch writer.StatusCodeWriter {
 		case response.StatusWriteSL:
-			err = writer.WriteStatusLine(req.Status)
+			err := writer.WriteStatusLine(200)
 			if err != nil {
 				fmt.Println(err)
 				return
 			}
 			writer.StatusCodeWriter = response.StatusWriteHeader
 		case response.StatusWriteHeader:
-			err = writer.WriteHeaders(req.Headers)
+			req.Headers = make(map[string]string)
+			req.Headers["Content-Type"] = "video/mp4"
+
+			err := writer.WriteHeaders(req.Headers)
 			if err != nil {
 				fmt.Println(err)
 				return
@@ -96,41 +76,13 @@ func handlerVideo(w io.Writer, req *request.Request) {
 			writer.StatusCodeWriter = response.StatusWriteBody
 		case response.StatusWriteBody:
 
-			for {
-				n, err := resp.Body.Read(buf)
-				if n > 0 {
-					storage = append(storage, buf[:n]...)
-					_, err := writer.WriteChunkedBody(buf[:n])
-					if err != nil {
-						fmt.Println(err)
-						return
-					}
-				}
-
-				if err != nil {
-					if err != io.EOF {
-						fmt.Println(err)
-					}
-					break
-				}
-			}
-
-			_, err = writer.WriteChunkedBodyDone()
+			data, err := os.ReadFile("./assets/vim.mp4")
 			if err != nil {
-				fmt.Println(err)
-				return
+				log.Fatal(err)
 			}
-			writer.StatusCodeWriter = response.StatusWriteTrailer
-		case response.StatusWriteTrailer:
-			trailer := make(headers.Headers)
-			sum := sha256.Sum256(storage)
-			sumStr := fmt.Sprintf("%x", sum)
-			trailer["X-Content-Sha256"] = sumStr
-			trailer["X-Content-Length"] = strconv.Itoa(len(storage))
-			err := writer.WriteTrailers(trailer)
+			_, err = writer.WriteBody(data)
 			if err != nil {
-				fmt.Println(err)
-				return
+				log.Fatal(err)
 			}
 			writer.StatusCodeWriter = response.StatusComplete
 		default:
