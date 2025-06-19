@@ -39,7 +39,7 @@ func handlerHandler(w io.Writer, req *request.Request) {
 	if strings.HasPrefix(req.RequestLine.RequestTarget, "/httpbin/") {
 		proxyHttpbinHandler(w, req)
 		return
-	} else if strings.HasPrefix(req.RequestLine.RequestTarget, "/video") {
+	} else if req.RequestLine.RequestTarget == "/video" {
 		handlerVideo(w, req)
 		return
 	} else {
@@ -55,18 +55,23 @@ func handlerVideo(w io.Writer, req *request.Request) {
 		StatusCodeWriter: response.StatusWriteSL,
 	}
 
+	data, err := os.ReadFile("./assets/vim.mp4")
+	if err != nil {
+		log.Fatal(err)
+	}
+	req.Status = response.Ok
+	req.Headers["Content-Type"] = "video/mp4"
+	req.Headers["Content-Length"] = strconv.Itoa(len(data))
 	for writer.StatusCodeWriter != response.StatusComplete {
 		switch writer.StatusCodeWriter {
 		case response.StatusWriteSL:
-			err := writer.WriteStatusLine(200)
+			err := writer.WriteStatusLine(req.Status)
 			if err != nil {
 				fmt.Println(err)
 				return
 			}
 			writer.StatusCodeWriter = response.StatusWriteHeader
 		case response.StatusWriteHeader:
-			req.Headers = make(map[string]string)
-			req.Headers["Content-Type"] = "video/mp4"
 
 			err := writer.WriteHeaders(req.Headers)
 			if err != nil {
@@ -76,20 +81,16 @@ func handlerVideo(w io.Writer, req *request.Request) {
 			writer.StatusCodeWriter = response.StatusWriteBody
 		case response.StatusWriteBody:
 
-			data, err := os.ReadFile("./assets/vim.mp4")
+			_, err := writer.WriteBody(data)
 			if err != nil {
-				log.Fatal(err)
-			}
-			_, err = writer.WriteBody(data)
-			if err != nil {
-				log.Fatal(err)
+				fmt.Println(err)
+				return
 			}
 			writer.StatusCodeWriter = response.StatusComplete
 		default:
 			return
 		}
 	}
-
 }
 
 func handlerConn(w io.Writer, req *request.Request) {
